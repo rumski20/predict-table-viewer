@@ -18,5 +18,6 @@ export default defineConfig({
       },
     },
   },
-  assetsInclude: ["**/*.csv"], // Add this line to include CSV files as assets
+  assetsInclude: ["**/*.csv"], // Include CSV files as assets
+  base: 'https://rumski20.github.io/predict-table-viewer/' // Add this line to set the base URL
 });
