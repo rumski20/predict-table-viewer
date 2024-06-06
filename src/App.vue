@@ -33,6 +33,7 @@ import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
 import { AgGridVue } from 'ag-grid-vue3'
 import Papa from 'papaparse'
+import chroma from 'chroma-js'
 
 // Import CSV files from the data directory
 const fileModules = import.meta.glob('./data/*.csv', { query: '?raw', import: 'default' })
@@ -133,12 +134,32 @@ const cellStyle = (params, minMax) => {
   const value = parseFloat(params.value)
   const absMin = Math.min(0, minMax.min) // Get absolute minimum value
   const range = minMax.max - absMin // Subtract absolute minimum from range
-  const ratio = Math.min(1, (value - absMin) / range) // Subtract absolute minimum from value
-  const hue = ratio * 120 // Calculate hue value
-  const saturation = 85 // Set saturation to 100%
-  const lightness = 70 // Set lightness to 50%
-  const color = `hsl(${hue}, ${saturation}%, ${lightness}%)` // Construct HSL color value
-  return { backgroundColor: color }
+
+  // Calculate cutoffs
+  const cutoffMin = absMin + (range * 0.02)
+  const cutoffMax = minMax.max - (range * 0.02)
+
+  // Clamp value between cutoffs
+  // const clampedValue = Math.max(cutoffMin, Math.min(cutoffMax, value))
+
+  // Create color scale
+  const colorScale = chroma.scale('viridis').domain([1, 0])
+
+  // Map value to color
+  const normalizedValue = (value - cutoffMin) / (cutoffMax - cutoffMin)
+  let color = colorScale(normalizedValue).hex()
+
+  // Adjust opacity based on normalized value
+  const opacity = 0.2 + (normalizedValue)
+  color = chroma(color).alpha(opacity).css()
+
+  // Get luminance of color
+  const luminance = chroma(color).luminance()
+
+  // Set text color based on luminance
+  const textColor = luminance < 0.35 ? 'white' : 'black'
+
+  return { backgroundColor: color, color: textColor }
 }
 
 // Function to handle file selection
