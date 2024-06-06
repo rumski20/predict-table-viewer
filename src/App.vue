@@ -14,7 +14,6 @@
     </div>
     <!-- Ag-Grid Vue component -->
     <ag-grid-vue
-      style="width: 100%; height: 700px"
       class="ag-theme-alpine"
       :columnDefs="columnDefs"
       :rowData="rowData"
@@ -150,6 +149,12 @@ onMounted(async () => {
 </script>
 
 <style>
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 /* Styles for the app container */
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
@@ -179,7 +184,7 @@ li:hover {
 
 /* Styles for the Ag-Grid component */
 .ag-theme-alpine {
-  height: 700px;
+  height: 100%;
   width: 100%;
 }
 </style>
