@@ -6,7 +6,8 @@
         <li
           v-for="(fileName, index) in fileNames"
           :key="index"
-          @click="selectFile(index)"
+          @click.prevent="selectFile(index)"
+          :class="{ 'is-active': index === selectedFileIndex }"
         >
           {{ fileName }}
         </li>
@@ -41,6 +42,7 @@ const fileNames = Object.keys(fileModules).map((key) =>
 
 // Define reactive variables
 const files = ref([])
+const selectedFileIndex = ref(null)
 const gridApi = ref(null)
 const columnDefs = ref([])
 const rowData = ref([])
@@ -132,6 +134,7 @@ const cellStyle = (params, minMax) => {
 const selectFile = async (index) => {
   const csvModule = await fileModules[`./data/${fileNames[index]}`]()
   loadCsvData(csvModule)
+  selectedFileIndex.value = index
 }
 
 // Function to handle grid ready event
@@ -186,5 +189,9 @@ li:hover {
 .ag-theme-alpine {
   height: 100%;
   width: 100%;
+}
+
+.is-active {
+  font-weight: bold;
 }
 </style>
