@@ -88,18 +88,27 @@ const loadCsvData = (csvString) => {
       }, {})
 
       // Generate column definitions based on CSV headers
-      columnDefs.value = [...Object.keys(result.data[0]).map((key, index) => ({
-        headerName: key,
-        field: key,
-        hide: hiddenHeaders.includes(key),
-        cellStyle: ignoredHeaders.includes(key)
-          ? undefined
-          : (params) => cellStyle(params, minMax[key]),
-        // set column width for any column that starts with an "x"
-        width: key.startsWith('x') ? 100 : undefined,
-        maxWidth: 150,
-        pinned: index === 0 ? 'left' : undefined, // Freeze the first column
-      })),
+      columnDefs.value = [...Object.keys(result.data[0]).map((key, index) => {
+        // Find the first non-null value in the column
+        const firstNonNullValue = result.data.find(row => row[key] != null)[key]
+
+        // Check if this value is a number
+        const isNumeric = !isNaN(parseFloat(firstNonNullValue)) && isFinite(firstNonNullValue)
+
+        return {
+          headerName: key,
+          field: key,
+          hide: hiddenHeaders.includes(key),
+          cellStyle: ignoredHeaders.includes(key)
+            ? undefined
+            : (params) => cellStyle(params, minMax[key]),
+          // set column width for any column that starts with an "x"
+          width: key.startsWith('x') ? 100 : undefined,
+          maxWidth: 150,
+          pinned: index === 0 ? 'left' : undefined, // Freeze the first column
+          comparator: isNumeric ? (valueA, valueB) => Number(valueA) - Number(valueB) : undefined, // Add this line
+        }
+      }),
       {
         headerName: 'AgeWar',
         valueGetter: (params) => {
