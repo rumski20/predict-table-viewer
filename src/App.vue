@@ -74,7 +74,7 @@ const hiddenHeaders = [
 ]
 
 // Function to load CSV data
-const loadCsvData = (csvString) => {
+const loadCsvData = (csvString, fileName) => {
   Papa.parse(csvString, {
     header: true,
     skipEmptyLines: true,
@@ -172,7 +172,7 @@ const selectFile = async (index) => {
   // Get the CSV module for the selected file
   const csvModule = await fileModules[`./data/${fileNames[index]}`]()
   // Load the CSV data
-  loadCsvData(csvModule)
+  loadCsvData(csvModule, fileName)
   // Update the selected file index
   selectedFileIndex.value = index
 }
