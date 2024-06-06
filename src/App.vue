@@ -16,6 +16,7 @@
     </div>
     <!-- Ag-Grid Vue component -->
     <ag-grid-vue
+      style="width: 100%; height: 100%;"
       class="ag-theme-alpine"
       :columnDefs="columnDefs"
       :rowData="rowData"
@@ -53,6 +54,7 @@ const defaultColDef = {
   sortable: true,
   filter: true,
   resizable: true,
+  width: 100
 } // Default column definition for Ag-Grid
 const autoSizeStrategy = {
   type: 'fitCellContents',
@@ -60,7 +62,7 @@ const autoSizeStrategy = {
 } // Auto size strategy for column width
 
 // Define headers to be ignored
-const ignoredHeaders = ['Player', 'Lvl', 'Frn', 'Pos', '%']
+const ignoredHeaders = ['Player', 'Lvl', 'Frn', 'Pos', '%', 'Bats', 'Throws']
 const hiddenHeaders = [
   '%',
   '$',
@@ -97,17 +99,24 @@ const loadCsvData = (csvString, fileName) => {
         const isNumeric = !isNaN(parseFloat(firstNonNullValue)) && isFinite(firstNonNullValue)
 
         return {
+          // Set the header name to the key
           headerName: key,
+          // Set the field to the key
           field: key,
+          // Hide the column if it is in the hiddenHeaders array
           hide: hiddenHeaders.includes(key),
+          // Set the cell style based on the min-max values of the column
           cellStyle: ignoredHeaders.includes(key)
             ? undefined
             : (params) => cellStyle(params, minMax[key]),
-          // set column width for any column that starts with an "x"
+          // Set the width to 100 for columns that start with an "x"
           width: key.startsWith('x') ? 100 : undefined,
-          maxWidth: 150,
-          pinned: index === 0 ? 'left' : undefined, // Freeze the first column
-          comparator: isNumeric ? (valueA, valueB) => Number(valueA) - Number(valueB) : undefined, // Add this line
+          // Set the maximum width to 150 for all columns
+          maxWidth: 200,
+          // Freeze the first three columns if the filename includes 'draft', otherwise freeze only the first column
+          pinned: key === 'xWAR' ? 'right' : (fileName.includes('draft') ? (index < 3 ? 'left' : undefined) : (index === 0 ? 'left' : undefined)),
+          // Use a custom comparator function for numeric columns
+          comparator: isNumeric ? (valueA, valueB) => Number(valueA) - Number(valueB) : undefined,
         }
       }),
       {
@@ -171,6 +180,7 @@ const cellStyle = (params, minMax) => {
 const selectFile = async (index) => {
   // Get the CSV module for the selected file
   const csvModule = await fileModules[`./data/${fileNames[index]}`]()
+  const fileName = fileNames[index]
   // Load the CSV data
   loadCsvData(csvModule, fileName)
   // Update the selected file index
