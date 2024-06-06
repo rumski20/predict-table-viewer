@@ -33,7 +33,7 @@ import { AgGridVue } from 'ag-grid-vue3'
 import Papa from 'papaparse'
 
 // Import CSV files from the data directory
-const fileModules = import.meta.glob('./data/*.csv', { as: 'raw' })
+const fileModules = import.meta.glob('./data/*.csv', { query: '?raw', import: 'default' })
 
 // Extract file names from the fileModules object
 const fileNames = Object.keys(fileModules).map((key) =>
