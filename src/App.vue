@@ -3,6 +3,7 @@
     <!-- File list -->
     <div>
       <ul>
+        <!-- Iterate over fileNames array and display each file name -->
         <li
           v-for="(fileName, index) in fileNames"
           :key="index"
@@ -26,6 +27,7 @@
 </template>
 
 <script setup>
+// Import necessary dependencies
 import { ref, onMounted } from 'vue'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-alpine.css'
@@ -41,20 +43,20 @@ const fileNames = Object.keys(fileModules).map((key) =>
 )
 
 // Define reactive variables
-const files = ref([])
-const selectedFileIndex = ref(null)
-const gridApi = ref(null)
-const columnDefs = ref([])
-const rowData = ref([])
+const files = ref([]) // Array to store CSV file modules
+const selectedFileIndex = ref(null) // Index of the selected file
+const gridApi = ref(null) // Reference to the Ag-Grid API
+const columnDefs = ref([]) // Array to store column definitions
+const rowData = ref([]) // Array to store row data
 const defaultColDef = {
   sortable: true,
   filter: true,
   resizable: true,
-}
+} // Default column definition for Ag-Grid
 const autoSizeStrategy = {
   type: 'fitCellContents',
   // skipHeader: true,
-}
+} // Auto size strategy for column width
 
 // Define headers to be ignored
 const ignoredHeaders = ['Player', 'Lvl', 'Frn', 'Pos', '%']
@@ -131,9 +133,17 @@ const cellStyle = (params, minMax) => {
 }
 
 // Function to handle file selection
+/**
+ * Selects a file from the list of file names and loads its CSV data.
+ * 
+ * @param {number} index - The index of the file to select.
+ */
 const selectFile = async (index) => {
+  // Get the CSV module for the selected file
   const csvModule = await fileModules[`./data/${fileNames[index]}`]()
+  // Load the CSV data
   loadCsvData(csvModule)
+  // Update the selected file index
   selectedFileIndex.value = index
 }
 
@@ -144,8 +154,11 @@ const onGridReady = (params) => {
 
 // Load CSV data on component mount
 onMounted(async () => {
+  // Iterate over fileModules object
   for (const path in fileModules) {
+    // Get the CSV module for the current file
     const csvModule = await fileModules[path]()
+    // Push the CSV module to the files array
     files.value.push(csvModule)
   }
 })
