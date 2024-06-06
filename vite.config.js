@@ -19,5 +19,5 @@ export default defineConfig({
     },
   },
   assetsInclude: ["**/*.csv"], // Include CSV files as assets
-  base: 'https://rumski20.github.io/predict-table-viewer/' // Add this line to set the base URL
+  base: '/', // Set the base path for Netlify
 });
