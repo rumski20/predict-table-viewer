@@ -1,25 +1,54 @@
 <template>
   <div id="app">
-    <!-- File list -->
-    <div>
-      <ul>
-        <!-- Iterate over fileNames array and display each file name -->
-        <li
-          v-for="(fileName, index) in fileNames"
-          :key="index"
-          @click.prevent="selectFile(index)"
-          :class="{ 'is-active': index === selectedFileIndex }"
+    <div class="select-menus">
+      <!-- Dropdown menu for selecting a column to pin -->
+      <label for="pinColumn">Pin a column:</label>
+      <select name="pinColumn" @change="pinColumn($event)">
+        <option
+          v-for="column in columnDefs"
+          :key="column.field"
+          :value="column.field"
         >
-          {{ fileName }}
-        </li>
-      </ul>
+          {{ column.headerName }}
+        </option>
+      </select>
+
+      <!-- File list -->
+      <div>
+        Select a file:
+        <!-- file name menu -->
+        <select
+          v-model="selectedFileIndex"
+          @change="selectFile(selectedFileIndex)"
+        >
+          <option
+            v-for="(fileName, index) in fileNames"
+            :key="index"
+            :value="index"
+          >
+            {{ fileName }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Search input -->
+      <div>
+        <label for="searchInput">Search:</label>
+        <input
+          type="text"
+          id="searchInput"
+          v-model="searchQuery"
+          @input="filterRows"
+        />
+      </div>
     </div>
+
     <!-- Ag-Grid Vue component -->
     <ag-grid-vue
-      style="width: 100%; height: 100%;"
+      style="width: 100%; height: 100%"
       class="ag-theme-alpine"
       :columnDefs="columnDefs"
-      :rowData="rowData"
+      :rowData="filteredRowData"
       :defaultColDef="defaultColDef"
       :autoSizeStrategy="autoSizeStrategy"
       @grid-ready="onGridReady"
@@ -37,7 +66,10 @@ import Papa from 'papaparse'
 import chroma from 'chroma-js'
 
 // Import CSV files from the data directory
-const fileModules = import.meta.glob('./data/*.csv', { query: '?raw', import: 'default' })
+const fileModules = import.meta.glob('./data/*.csv', {
+  query: '?raw',
+  import: 'default',
+})
 
 // Extract file names from the fileModules object
 const fileNames = Object.keys(fileModules).map((key) =>
@@ -50,11 +82,13 @@ const selectedFileIndex = ref(null) // Index of the selected file
 const gridApi = ref(null) // Reference to the Ag-Grid API
 const columnDefs = ref([]) // Array to store column definitions
 const rowData = ref([]) // Array to store row data
+const filteredRowData = ref([])
+const searchQuery = ref('')
 const defaultColDef = {
   sortable: true,
   filter: true,
   resizable: true,
-  width: 100
+  width: 100,
 } // Default column definition for Ag-Grid
 const autoSizeStrategy = {
   type: 'fitCellContents',
@@ -63,7 +97,7 @@ const autoSizeStrategy = {
 
 // Define headers to be ignored
 const ignoredHeaders = ['Player', 'Lvl', 'Frn', 'Pos', '%', 'Bats', 'Throws']
-const hiddenHeaders = [
+let hiddenHeaders = [
   '%',
   '$',
   'team',
@@ -91,49 +125,63 @@ const loadCsvData = (csvString, fileName) => {
       }, {})
 
       // Generate column definitions based on CSV headers
-      columnDefs.value = [...Object.keys(result.data[0]).map((key, index) => {
-        // Find the first non-null value in the column
-        const firstNonNullValue = result.data.find(row => row[key] != null)[key]
+      columnDefs.value = [
+        ...Object.keys(result.data[0]).map((key, index) => {
+          // Find the first non-null value in the column
+          const firstNonNullValue = result.data.find((row) => row[key] != null)[
+            key
+          ]
 
-        // Check if this value is a number
-        const isNumeric = !isNaN(parseFloat(firstNonNullValue)) && isFinite(firstNonNullValue)
+          // Check if this value is a number
+          const isNumeric =
+            !isNaN(parseFloat(firstNonNullValue)) && isFinite(firstNonNullValue)
 
-        return {
-          // Set the header name to the key
-          headerName: key,
-          // Set the field to the key
-          field: key,
-          // Hide the column if it is in the hiddenHeaders array
-          hide: hiddenHeaders.includes(key),
-          // Set the cell style based on the min-max values of the column
-          cellStyle: ignoredHeaders.includes(key)
-            ? undefined
-            : (params) => cellStyle(params, minMax[key]),
-          // Set the width to 100 for columns that start with an "x"
-          width: key.startsWith('x') ? 100 : undefined,
-          // Set the maximum width to 150 for all columns
-          maxWidth: 200,
-          // Freeze the first three columns if the filename includes 'draft', otherwise freeze only the first column
-          pinned: key === 'xWAR' ? 'right' : (fileName.includes('draft') ? (index < 3 ? 'left' : undefined) : (index === 0 ? 'left' : undefined)),
-          // Use a custom comparator function for numeric columns
-          comparator: isNumeric ? (valueA, valueB) => Number(valueA) - Number(valueB) : undefined,
-        }
-      }),
-      {
-        headerName: 'AgeWar',
-        valueGetter: (params) => {
-          // Calculate the value for the new column based on the values of other columns
-          const age = parseFloat(params.data['Age']);
-          const war = parseFloat(params.data['xWAR']);
-          const ageFactor = 1 / age; // Calculate the age factor
-          return war * ageFactor; // Multiply war by age factor to emphasize lower ages
-        },
-        width: 100,
-        cellStyle: (params) => cellStyle(params, {min: -1, max: 1}),
-      }];
+          // if file name includes bat, also hide xInn column
+          if (fileName.includes('bat')) {
+            hiddenHeaders.push('xInn')
+          }
+          return {
+            // Set the header name to the key
+            headerName: key,
+            // Set the field to the key
+            field: key,
+            // Hide the column if it is in the hiddenHeaders array
+            hide: hiddenHeaders.includes(key),
+            // Set the cell style based on the min-max values of the column
+            cellStyle: ignoredHeaders.includes(key)
+              ? undefined
+              : (params) => cellStyle(params, minMax[key]),
+            // Set the width to 100 for columns that start with an "x"
+            width: key.startsWith('x') ? 100 : undefined,
+            // Set the maximum width to 150 for all columns
+            maxWidth: 200,
+            // Freeze the first three columns if the filename includes 'draft', otherwise freeze only the first column
+            pinned: isPinned(key, index, fileName),
+            // Use a custom comparator function for numeric columns
+            comparator: isNumeric
+              ? (valueA, valueB) => Number(valueA) - Number(valueB)
+              : undefined,
+          }
+        }),
+        // {
+        //   headerName: 'AgeWar',
+        //   valueGetter: (params) => {
+        //     // Calculate the value for the new column based on the values of other columns
+        //     const age = parseFloat(params.data['Age']);
+        //     const war = fileName.includes('bat') ? parseFloat(params.data['xWAR']) : parseFloat(params.data['xWARs']);
+        //     const ageFactor = 1 / age; // Calculate the age factor
+        //     return war * ageFactor; // Multiply war by age factor to emphasize lower ages
+        //   },
+        //   width: 100,
+        //   cellStyle: (params) => cellStyle(params, {min: -1, max: 1}),
+        //   // hide it if it's a draft file
+        //   hide: fileName.includes('draft'),
+        // }
+      ]
 
       // Set row data
-      rowData.value = result.data;
+      rowData.value = result.data
+      filteredRowData.value = result.data
     },
   })
 }
@@ -145,8 +193,8 @@ const cellStyle = (params, minMax) => {
   const range = minMax.max - absMin // Subtract absolute minimum from range
 
   // Calculate cutoffs
-  const cutoffMin = absMin + (range * 0.02)
-  const cutoffMax = minMax.max - (range * 0.02)
+  const cutoffMin = absMin + range * 0.02
+  const cutoffMax = minMax.max - range * 0.02
 
   // Clamp value between cutoffs
   // const clampedValue = Math.max(cutoffMin, Math.min(cutoffMax, value))
@@ -159,7 +207,7 @@ const cellStyle = (params, minMax) => {
   let color = colorScale(normalizedValue).hex()
 
   // Adjust opacity based on normalized value
-  const opacity = 0.2 + (normalizedValue)
+  const opacity = 0.2 + normalizedValue
   color = chroma(color).alpha(opacity).css()
 
   // Get luminance of color
@@ -171,10 +219,40 @@ const cellStyle = (params, minMax) => {
   return { backgroundColor: color, color: textColor }
 }
 
+// function to determine if a column is pinned to the right or the left
+// Function to determine if a column is pinned to the right or the left
+function isPinned(colName, index, fileName) {
+  // Check if it is the first column
+  if (index === 0) {
+    return 'left' // Pin to the left
+  } else if (fileName.includes('draft')) {
+    // Check if it is a draft file
+    if (fileName.includes('pit')) {
+      // Check if it is a pitching draft file
+      // Pin the first two columns to the left
+      return index < 2 ? 'left' : undefined
+    } else {
+      // Check if it is a batting draft file
+      // Pin the first three columns to the left
+      return index < 3 ? 'left' : undefined
+    }
+  } else if (fileName.includes('bat')) {
+    // Check if it is a batting file
+    // Pin the 'xWAR' column to the right
+    return colName === 'xWAR' ? 'right' : undefined
+  } else if (fileName.includes('pit')) {
+    // Check if it is a pitching file
+    // Pin columns with 'xWAR' in the name to the right
+    return colName.includes('xWAR') ? 'right' : undefined
+  } else {
+    return undefined // Do not pin the column
+  }
+}
+
 // Function to handle file selection
 /**
  * Selects a file from the list of file names and loads its CSV data.
- * 
+ *
  * @param {number} index - The index of the file to select.
  */
 const selectFile = async (index) => {
@@ -192,6 +270,27 @@ const onGridReady = (params) => {
   gridApi.value = params.api
 }
 
+// Function to pin a column
+const pinColumn = (event) => {
+  const columnKey = event.target.value
+  columnDefs.value = columnDefs.value.map((col) => {
+    if (col.field === columnKey) {
+      return { ...col, pinned: 'left' }
+    }
+    return col
+  })
+}
+
+// Function to filter rows based on search query
+const filterRows = () => {
+  const query = searchQuery.value.toLowerCase()
+  filteredRowData.value = rowData.value.filter((row) => {
+    return Object.values(row).some((value) =>
+      value.toString().toLowerCase().includes(query)
+    )
+  })
+}
+
 // Load CSV data on component mount
 onMounted(async () => {
   // Iterate over fileModules object
@@ -205,7 +304,9 @@ onMounted(async () => {
 </script>
 
 <style>
-html, body, #app {
+html,
+body,
+#app {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -246,5 +347,17 @@ li:hover {
 
 .is-active {
   font-weight: bold;
+}
+
+/* select menu styling */
+.select-menus {
+  display: flex;
+  align-items: center;
+}
+
+.select-menus label,
+.select-menus select,
+.select-menus div {
+  margin-right: 20px;
 }
 </style>
