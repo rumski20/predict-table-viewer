@@ -52,6 +52,7 @@
       :defaultColDef="defaultColDef"
       :autoSizeStrategy="autoSizeStrategy"
       @grid-ready="onGridReady"
+      rowSelection="multiple"
     ></ag-grid-vue>
   </div>
 </template>
@@ -84,6 +85,7 @@ const columnDefs = ref([]) // Array to store column definitions
 const rowData = ref([]) // Array to store row data
 const filteredRowData = ref([])
 const searchQuery = ref('')
+const selectedRows = ref([])
 const defaultColDef = {
   sortable: true,
   filter: true,
@@ -126,6 +128,15 @@ const loadCsvData = (csvString, fileName) => {
 
       // Generate column definitions based on CSV headers
       columnDefs.value = [
+        {
+          headerName: '',
+          field: 'checkbox',
+          checkboxSelection: true,
+          width: 10,
+          maxWidth: 20,
+          pinned: 'left',
+          cellRenderer: 'agGroupCellRenderer',
+        },
         ...Object.keys(result.data[0]).map((key, index) => {
           // Find the first non-null value in the column
           const firstNonNullValue = result.data.find((row) => row[key] != null)[
@@ -268,6 +279,7 @@ const selectFile = async (index) => {
 // Function to handle grid ready event
 const onGridReady = (params) => {
   gridApi.value = params.api
+  params.api.addEventListener('rowSelected', onRowSelected)
 }
 
 // Function to pin a column
@@ -284,11 +296,31 @@ const pinColumn = (event) => {
 // Function to filter rows based on search query
 const filterRows = () => {
   const query = searchQuery.value.toLowerCase()
-  filteredRowData.value = rowData.value.filter((row) => {
+  const filtered = rowData.value.filter((row) => {
     return Object.values(row).some((value) =>
       value.toString().toLowerCase().includes(query)
     )
   })
+  filteredRowData.value = [
+    ...selectedRows.value,
+    ...filtered.filter((row) => !selectedRows.value.includes(row)),
+  ]
+}
+
+const onRowSelected = (event) => {
+  const selectedData = event.node.data
+  if (event.node.isSelected()) {
+    // Add the selected row to the selectedRows array
+    if (!selectedRows.value.includes(selectedData)) {
+      selectedRows.value.push(selectedData)
+    }
+  } else {
+    // Remove the unselected row from the selectedRows array
+    selectedRows.value = selectedRows.value.filter(
+      (row) => row !== selectedData
+    )
+  }
+  filterRows()
 }
 
 // Load CSV data on component mount
