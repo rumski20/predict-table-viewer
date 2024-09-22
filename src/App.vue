@@ -108,7 +108,7 @@ const ignoredHeaders = [
   '%',
   'Bats',
   'Throws',
-  'Stat',
+  'Rating',
 ]
 let hiddenHeaders = [
   '%',
@@ -295,8 +295,8 @@ function isPinned(colName, index, fileName) {
 }
 
 const valueFormatter = (key, params) => {
-  // if key == 'Stat' then return the value as is
-  if (key === 'Stat') {
+  // if key == 'Rating' then return the value as is
+  if (key === 'Rating') {
     return params.value
   }
   const value = parseFloat(params.value)
