@@ -100,7 +100,16 @@ const autoSizeStrategy = {
 } // Auto size strategy for column width
 
 // Define headers to be ignored
-const ignoredHeaders = ['Player', 'Lvl', 'Frn', 'Pos', '%', 'Bats', 'Throws']
+const ignoredHeaders = [
+  'Player',
+  'Lvl',
+  'Frn',
+  'Pos',
+  '%',
+  'Bats',
+  'Throws',
+  'Stat',
+]
 let hiddenHeaders = [
   '%',
   '$',
@@ -163,16 +172,21 @@ const loadCsvData = (csvString, fileName) => {
             // Set the cell style based on the min-max values of the column
             cellStyle: ignoredHeaders.includes(key)
               ? undefined
-              : (params) => cellStyle(params, minMax[key]),
+              : (params) => cellStyle(params, minMax[key], fileName),
             // Set the width to 100 for columns that start with an "x"
+            // set width to 90 if filename has "features" in it
             width: key.startsWith('x') ? 100 : undefined,
             // Set the maximum width to 150 for all columns
-            maxWidth: 200,
+            maxWidth: fileName.includes('features') ? 120 : 200,
             // Freeze the first three columns if the filename includes 'draft', otherwise freeze only the first column
             pinned: isPinned(key, index, fileName),
             // Use a custom comparator function for numeric columns
             comparator: isNumeric
               ? (valueA, valueB) => Number(valueA) - Number(valueB)
+              : undefined,
+            // Apply the valueFormatter function
+            valueFormatter: fileName.includes('features')
+              ? (params) => valueFormatter(key, params)
               : undefined,
           }
         }),
@@ -212,27 +226,33 @@ const loadCsvData = (csvString, fileName) => {
 }
 
 // Function to apply cell styles based on min-max values
-const cellStyle = (params, minMax) => {
-  const value = parseFloat(params.value)
-  const absMin = Math.min(0, minMax.min) // Get absolute minimum value
+const cellStyle = (params, minMax, fileName) => {
+  const value = params.value
+  const absMin = Math.min(0, minMax.min) // Define absMin based on minMax.min
   const range = minMax.max - absMin // Subtract absolute minimum from range
 
   // Calculate cutoffs
   const cutoffMin = absMin + range * 0.02
   const cutoffMax = minMax.max - range * 0.02
 
-  // Clamp value between cutoffs
-  // const clampedValue = Math.max(cutoffMin, Math.min(cutoffMax, value))
+  // Ensure value is parsed as a number
+  const parsedValue = parseFloat(value)
+  if (isNaN(parsedValue)) {
+    return { backgroundColor: 'gray', color: 'black' }
+  }
 
   // Create color scale
   const colorScale = chroma.scale('viridis').domain([1, 0])
 
   // Map value to color
-  const normalizedValue = (value - cutoffMin) / (cutoffMax - cutoffMin)
-  let color = colorScale(normalizedValue).hex()
+  const normalizedValue = (parsedValue - cutoffMin) / (cutoffMax - cutoffMin)
+  const clampedNormalizedValue = Math.max(0, Math.min(1, normalizedValue))
+  let color = fileName.includes('features')
+    ? colorScale(parsedValue).hex()
+    : colorScale(clampedNormalizedValue).hex()
 
   // Adjust opacity based on normalized value
-  const opacity = 0.2 + normalizedValue
+  const opacity = 0.2 + clampedNormalizedValue
   color = chroma(color).alpha(opacity).css()
 
   // Get luminance of color
@@ -272,6 +292,15 @@ function isPinned(colName, index, fileName) {
   } else {
     return undefined // Do not pin the column
   }
+}
+
+const valueFormatter = (key, params) => {
+  // if key == 'Stat' then return the value as is
+  if (key === 'Stat') {
+    return params.value
+  }
+  const value = parseFloat(params.value)
+  return isNaN(value) ? '' : value.toFixed(3)
 }
 
 // Function to handle file selection
@@ -408,7 +437,7 @@ li:hover {
 }
 
 .table-container {
-  height: 100vh; /* Adjust the height as needed */
+  height: 95vh; /* Adjust the height as needed */
   overflow-x: auto;
   overflow-y: hidden; /* Hide vertical scroll bar if not needed */
 }
