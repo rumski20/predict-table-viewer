@@ -44,16 +44,18 @@
     </div>
 
     <!-- Ag-Grid Vue component -->
-    <ag-grid-vue
-      style="width: 100%; height: 100%"
-      class="ag-theme-alpine"
-      :columnDefs="columnDefs"
-      :rowData="filteredRowData"
-      :defaultColDef="defaultColDef"
-      :autoSizeStrategy="autoSizeStrategy"
-      @grid-ready="onGridReady"
-      rowSelection="multiple"
-    ></ag-grid-vue>
+    <div class="table-container">
+      <ag-grid-vue
+        style="width: 100%; height: 100%"
+        class="ag-theme-alpine"
+        :columnDefs="columnDefs"
+        :rowData="filteredRowData"
+        :defaultColDef="defaultColDef"
+        :autoSizeStrategy="autoSizeStrategy"
+        @grid-ready="onGridReady"
+        rowSelection="multiple"
+      ></ag-grid-vue>
+    </div>
   </div>
 </template>
 
@@ -104,8 +106,8 @@ let hiddenHeaders = [
   '$',
   'team',
   'teamid',
-  'RLR',
-  'pos_adj',
+  // 'RLR',
+  // 'pos_adj',
   'RL',
   'xRAAP9',
   'xDRPW',
@@ -189,6 +191,18 @@ const loadCsvData = (csvString, fileName) => {
         //   hide: fileName.includes('draft'),
         // }
       ]
+
+      // Reorder columns to place xOPS right after xSLG
+      const xSLGIndex = columnDefs.value.findIndex(
+        (col) => col.field === 'xSLG'
+      )
+      const xOPSIndex = columnDefs.value.findIndex(
+        (col) => col.field === 'xOPS'
+      )
+      if (xSLGIndex !== -1 && xOPSIndex !== -1 && xOPSIndex !== xSLGIndex + 1) {
+        const [xOPSColumn] = columnDefs.value.splice(xOPSIndex, 1)
+        columnDefs.value.splice(xSLGIndex + 1, 0, xOPSColumn)
+      }
 
       // Set row data
       rowData.value = result.data
@@ -391,5 +405,11 @@ li:hover {
 .select-menus select,
 .select-menus div {
   margin-right: 20px;
+}
+
+.table-container {
+  height: 100vh; /* Adjust the height as needed */
+  overflow-x: auto;
+  overflow-y: hidden; /* Hide vertical scroll bar if not needed */
 }
 </style>
